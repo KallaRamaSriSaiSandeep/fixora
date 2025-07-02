@@ -1,16 +1,20 @@
-# Use a Maven image to build the app
-FROM maven:3.9.6-eclipse-temurin-17 AS build
+# Start from a Java base image
+FROM openjdk:17-jdk-slim
+
+# Set the working directory
 WORKDIR /app
+
+# Copy pom.xml and install dependencies (for caching)
+COPY pom.xml ./
+COPY mvnw ./
+COPY .mvn .mvn
+RUN ./mvnw dependency:go-offline
+
+# Copy the full source code
 COPY . .
-RUN mvn clean package -DskipTests
 
-# Use a lightweight JDK image to run the app
-FROM eclipse-temurin:17-jdk-alpine
-WORKDIR /app
-COPY --from=build /app/target/*.jar app.jar
+# Package the Spring Boot app
+RUN ./mvnw clean package -DskipTests
 
-# Let Render set the PORT environment variable
-ENV PORT 9098
-EXPOSE 9098
-
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Run the jar file
+CMD ["java", "-jar", "target/*.jar"]
