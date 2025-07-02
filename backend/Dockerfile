@@ -1,20 +1,29 @@
-# Start from a Java base image
+# Use OpenJDK 17 slim image
 FROM openjdk:17-jdk-slim
 
 # Set the working directory
 WORKDIR /app
 
-# Copy pom.xml and install dependencies (for caching)
-COPY pom.xml ./
-COPY mvnw ./
+# Install Maven
+RUN apt-get update && \
+    apt-get install -y maven && \
+    rm -rf /var/lib/apt/lists/*
+
+# Copy Maven wrapper and project files
 COPY .mvn .mvn
+COPY mvnw pom.xml ./
+
+# Download dependencies
 RUN ./mvnw dependency:go-offline
 
-# Copy the full source code
+# Copy all source files
 COPY . .
 
-# Package the Spring Boot app
+# Build the application
 RUN ./mvnw clean package -DskipTests
 
-# Run the jar file
-CMD ["java", "-jar", "target/*.jar"]
+# Expose the port your Spring Boot app runs on
+EXPOSE 9098
+
+# Run the JAR
+CMD ["java", "-jar", "$(find target -name '*-SNAPSHOT.jar' | head -n 1)"]
